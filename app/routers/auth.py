@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from starlette import status
-from database import SessionLocal, get_db
+from database import SessionFactory, get_db
 from models import Users
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
@@ -13,8 +13,10 @@ from dotenv import load_dotenv
 import bcrypt
 import os
 from schemas import CreateUserRequest, Token
+import logging
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix='/auth',
@@ -24,16 +26,22 @@ router = APIRouter(
 # --- Configuration ---
 
 JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is not set")
 ALGORITHM = "HS256"
 
 # --- Security Helpers ---
 
 
+BCRYPT_ROUNDS = 12
+
+
 def hash_password(password: str) -> str:
-    pwd_bytes = password.encode('utf-8')
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed.decode('utf-8')
+    salt = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
+    return bcrypt.hashpw(
+        password.encode("utf-8"),
+        salt
+    ).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -44,15 +52,15 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # --- Dependencies ---
 
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/login')
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl='/auth/login')
 db_dependency = Annotated[Session, Depends(get_db)]
 
 # --- Auth Routes ---
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def create_user(db: db_dependency,
-                      create_user_request: CreateUserRequest):
+def create_user(db: db_dependency,
+                create_user_request: CreateUserRequest):
     create_user_model = Users(
         username=create_user_request.username,
         email=create_user_request.email,
@@ -62,56 +70,80 @@ async def create_user(db: db_dependency,
     try:
         db.add(create_user_model)
         db.commit()
-    except IntegrityError:
+        return {"status": "User created successfully"}
+    except IntegrityError as e:
         db.rollback()
+        logger.warning("IntegrityError during user creation", exc_info=e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists."
+            detail="Registration failed."
         )
 
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                                 db: db_dependency):
-    user = authenticate_user(form_data.username, form_data.password, db)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail='Could not validate user.')
-    token = create_access_token(
-        user.username, user.user_id, timedelta(minutes=20))
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
+                           db: Session = Depends(get_db)):
+    user = authenticate_user(form_data.username, form_data.password, db,)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials")
 
-    return {'access_token': token, 'token_type': 'bearer'}
+    token = create_access_token(
+        user=user,
+        expires_delta=timedelta(minutes=20))
+
+    return {"access_token": token, "token_type": "bearer"}
 
 # --- Auth Functions ---
 
 
-def authenticate_user(username: str, password: str, db):
-    user = db.query(Users).filter(Users.username == username).first()
-    if not user:
-        return False
+def authenticate_user(username: str, password: str, db: Session) -> Users | None:
+    user = (
+        db.query(Users)
+        .filter(Users.username == username)
+        .first()
+    )
+
+    if user is None:
+        return None
+
     if not verify_password(password, user.hashed_password):
-        return False
+        return None
+
     return user
 
 
-def create_access_token(username: str, user_id: int, expires_delta: timedelta):
-    encode = {'sub': username, 'id': user_id}
-    expires = datetime.now(timezone.utc) + expires_delta
-    encode.update({'exp': expires})
-    return jwt.encode(encode, JWT_SECRET, algorithm=ALGORITHM)
+def create_access_token(user: Users, expires_delta: timedelta):
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": user.username,
+        "uid": user.user_id,
+        "iat": now,
+        "nbf": now,
+        "exp": now + expires_delta
+    }
+
+    return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+def get_current_user(token: str = Depends(oauth2_bearer),
+                     db: Session = Depends(get_db)) -> Users:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        username: str = payload.get('sub')
-        user_id: int = payload.get('id')
-        if username is None or user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail='Could not validate user.',
-                                headers={"WWW-Authenticate": "Bearer"})
-        return {'username': username, 'id': user_id}
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail='Could not validate user.',
                             headers={"WWW-Authenticate": "Bearer"})
+
+    user_id = payload.get("uid")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+
+    user = db.query(Users).filter(Users.user_id == user_id).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+
+    return user
