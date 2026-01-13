@@ -30,12 +30,12 @@ Instead of treating tasks as isolated items, this system models:
 
 ### User Authentication
 
-- `POST /auth/`: Register a new user.
-- `POST /auth/token`: Login to obtain JWT token.
+- `POST /auth/register`: Register a new user.
+- `POST /auth/login`: Login to obtain JWT token.
 
 ### Task Management (Authenticated)
 
-- `POST /tasks`: Create a new task.
+- `POST /task`: Create a new task.
 - `GET /tasks`: Retrieve all tasks (with pagination).
 - `GET /tasks/{id}`: Get details of a specific task.
 - `PATCH /tasks/{id}`: Update an existing task.

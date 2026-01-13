@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime, timezone
@@ -27,16 +27,19 @@ class Tasks(Base):
 
     cognitive_load = Column(Integer, nullable=False)
     priority = Column(Integer, nullable=False)
-    state = Column(Integer, nullable=False, default="pending")
+    state = Column(Integer, nullable=False, default="1")
     is_fragmentable = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
-        DateTime,
-        default=datetime.now(timezone.utc),
-        onupdate=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now()
     )
 
     owner = relationship("Users", back_populates="tasks")
+
+    __table_args__ = (UniqueConstraint(
+        'title', 'user_id', name='uq_task_title_user'),)
