@@ -15,7 +15,8 @@ class Users(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    tasks = relationship("Tasks", back_populates="owner")
+    tasks = relationship("Tasks", back_populates="owner",
+                         cascade="all, delete-orphan")
 
 
 class Tasks(Base):
@@ -27,7 +28,7 @@ class Tasks(Base):
 
     cognitive_load = Column(Integer, nullable=False)
     priority = Column(Integer, nullable=False)
-    state = Column(Integer, nullable=False, default="1")
+    state = Column(Integer, nullable=False, default=1)
     is_fragmentable = Column(Boolean, default=False)
 
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)

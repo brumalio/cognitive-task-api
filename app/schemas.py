@@ -61,7 +61,7 @@ class Token(BaseModel):
 
 class TaskBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=128)
-    description: str = Field(..., min_length=3, max_length=512)
+    description: Optional[str] = Field(None, min_length=3, max_length=512)
     cognitive_load: CognitiveLoad = Field(default=CognitiveLoad.LOW,
                                           description="The cognitive load of the task")
     priority: Priority = Field(default=Priority.LOW,
