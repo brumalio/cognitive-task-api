@@ -70,7 +70,7 @@ def create_user(db: db_dependency,
     try:
         db.add(create_user_model)
         db.commit()
-        return {"status": "User created successfully"}
+        return {"status": "User created successfully."}
     except IntegrityError as e:
         db.rollback()
         logger.warning("IntegrityError during user creation", exc_info=e)
@@ -87,7 +87,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(),
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials")
+            detail="Invalid credentials.")
 
     token = create_access_token(
         user=user,
@@ -144,6 +144,6 @@ def get_current_user(token: str = Depends(oauth2_bearer),
     user = db.query(Users).filter(Users.user_id == user_id).first()
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists.")
 
     return user

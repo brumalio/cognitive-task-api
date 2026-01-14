@@ -41,7 +41,7 @@ class CreateUserRequest(BaseModel):
         return v.lower()
 
     class Config:
-        from_attributes = True  # Esto permite leer modelos de SQLAlchemy
+        from_attributes = True
         json_schema_extra = {
             "example": {
                 "username": "brumalio_dev",

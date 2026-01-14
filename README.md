@@ -6,9 +6,6 @@
 
 ## Overview
 
-> [!WARNING]
-> This API is a work in progress.
-
 A RESTful Task Management API built with FastAPI, designed with scalability in mind.
 
 This project is built around the concept of **cognitive load**: the idea that productivity is limited not by the number of tasks, but by how they are mentally structured.
@@ -22,7 +19,7 @@ Instead of treating tasks as isolated items, this system models:
 ## Features
 
 - User Authentication: Secure registration and JWT-based login.
-- Task Management: CRUD foundation defined (implementation in progress).
+- Task Management: CRUD foundation defined.
 - Relational Modeling: 1:n relationship between Users and Tasks.
 - Validation: Strict data validation using Pydantic V2.
 
@@ -80,6 +77,8 @@ Instead of treating tasks as isolated items, this system models:
    ```
 
 The interactive documentation will be at: `http://127.0.0.1:8000/docs`.
+
+By default, the application runs in development mode. In development mode, database tables are created automatically on startup.
 
 ## Technical Focus
 

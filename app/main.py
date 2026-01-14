@@ -9,5 +9,7 @@ app = FastAPI()
 app.include_router(auth.router)
 app.include_router(tasks.router)
 
+ENV = os.getenv("ENV", "development")
+
 if os.getenv("ENV") == "development":
     Base.metadata.create_all(bind=engine)

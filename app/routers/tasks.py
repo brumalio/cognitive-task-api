@@ -72,3 +72,49 @@ def read_task(user: user_dependency, db: db_dependency, task_id: int):
         raise HTTPException(status_code=404, detail="Task not found.")
 
     return task_model
+
+
+@router.patch("/{task_id}", status_code=status.HTTP_200_OK, response_model=TaskUpdate,
+              response_model_exclude_unset=True)
+def update_task(user: user_dependency, db: db_dependency, task_id: int, task_update: TaskUpdate):
+    task_model = db.query(Tasks).filter(
+        Tasks.task_id == task_id, Tasks.user_id == user.id).first()
+
+    if task_model is None:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    for field, value in task_update.dict(exclude_unset=True).items():
+        setattr(task_model, field, value)
+
+    try:
+        db.add()
+        db.commit()
+        db.refresh(task_model)
+        return task_model
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning("IntegrityError while updating task", exc_info=e)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Incorrect data sent."
+        )
+
+
+@router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_task(user: user_dependency, db: db_dependency, task_id: int):
+    task_model = db.query(Tasks).filter(Tasks.task_id == task_id).first()
+
+    if task_model is None:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    try:
+        db.delete(task_model)
+        db.commit()
+        return None
+    except IntegrityError as e:
+        db.rollback()
+        logger.warning("IntegrityError while deleting task", exc_info=e)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The request is invalid."
+        )
