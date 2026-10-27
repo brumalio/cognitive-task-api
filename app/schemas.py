@@ -93,6 +93,19 @@ class TaskUpdate(BaseModel):
     state: Optional[State] = Field(None, description="The state of the task")
     is_fragmentable: Optional[bool] = Field(
         None, description="Indicates whether the task can be broken down")
+    
+    @field_validator(
+    "title",
+    "cognitive_load",
+    "priority",
+    "state",
+    "is_fragmentable",
+)
+    @classmethod
+    def reject_explicit_null(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null.")
+        return value
 
 
 class TaskRead(TaskBase):
