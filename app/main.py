@@ -11,5 +11,5 @@ app.include_router(tasks.router)
 
 ENV = os.getenv("ENV", "development")
 
-if os.getenv("ENV") == "development":
+if ENV == "development":
     Base.metadata.create_all(bind=engine)

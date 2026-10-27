@@ -32,13 +32,20 @@ class CreateUserRequest(BaseModel):
                           description="Unique username", pattern="^[a-zA-Z0-9_]+$",)
     email: EmailStr = Field(..., example="johndoe@example.com")
     password: str = Field(..., min_length=8, max_length=72,
-                          description="The password is encrypted with Bcrypt (max 72 chars)", example="MySecurePassword123"
+                          description="The password is encrypted with Bcrypt (max 72 bytes)", example="MySecurePassword123"
                           )
 
     @field_validator('email')
     @classmethod
     def email_to_lowercase(cls, v: str) -> str:
         return v.lower()
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_byte_length(cls, v: str) -> str:
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("It must not exceed 72 bytes when encoded in UTF-8.")
+        return v
 
     class Config:
         from_attributes = True

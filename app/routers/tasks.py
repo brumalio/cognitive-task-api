@@ -78,7 +78,7 @@ def read_task(user: user_dependency, db: db_dependency, task_id: int):
               response_model_exclude_unset=True)
 def update_task(user: user_dependency, db: db_dependency, task_id: int, task_update: TaskUpdate):
     task_model = db.query(Tasks).filter(
-        Tasks.task_id == task_id, Tasks.user_id == user.id).first()
+        Tasks.task_id == task_id, Tasks.user_id == user.user_id).first()
 
     if task_model is None:
         raise HTTPException(status_code=404, detail="Task not found.")
@@ -87,7 +87,6 @@ def update_task(user: user_dependency, db: db_dependency, task_id: int, task_upd
         setattr(task_model, field, value)
 
     try:
-        db.add()
         db.commit()
         db.refresh(task_model)
         return task_model
@@ -102,7 +101,9 @@ def update_task(user: user_dependency, db: db_dependency, task_id: int, task_upd
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(user: user_dependency, db: db_dependency, task_id: int):
-    task_model = db.query(Tasks).filter(Tasks.task_id == task_id).first()
+    
+    task_model = db.query(Tasks).filter(Tasks.task_id == task_id)\
+        .filter(Tasks.user_id == user.user_id).first()
 
     if task_model is None:
         raise HTTPException(status_code=404, detail="Task not found.")

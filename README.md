@@ -32,8 +32,8 @@ Instead of treating tasks as isolated items, this system models:
 
 ### Task Management (Authenticated)
 
-- `POST /task`: Create a new task.
-- `GET /tasks`: Retrieve all tasks (with pagination).
+- `POST /tasks`: Create a new task.
+- `GET /tasks`: Retrieve all tasks.
 - `GET /tasks/{id}`: Get details of a specific task.
 - `PATCH /tasks/{id}`: Update an existing task.
 - `DELETE /tasks/{id}`: Delete a task.
@@ -44,7 +44,7 @@ Instead of treating tasks as isolated items, this system models:
 
 - Python 3.14+
 - pip / virtualenv
-- PostgreSQL (or any other database)
+- PostgreSQL
 
 ### Installation
 
@@ -73,7 +73,7 @@ Instead of treating tasks as isolated items, this system models:
 
 4. Run the application:
    ```bash
-   fastapi dev app/main.py
+   python -m uvicorn main:app --app-dir app --reload
    ```
 
 The interactive documentation will be at: `http://127.0.0.1:8000/docs`.
